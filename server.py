@@ -54,10 +54,11 @@ def loadConfig(config_path):
 @app.route("/", methods=['GET', 'POST'])
 def index():
     global source_root, temp_root
-    if request.method == 'GET':
-        return json.dumps({'ok':''})
+    # if request.method == 'GET':
+    #     return json.dumps({'ok':''})
 
-    elif request.method == 'POST':
+    if request.method == 'POST' or request.method == 'GET':
+        print("we got something!")
         # load payload
         try:
             payload = json.loads(request.values['data']) #request.json['data']
@@ -69,30 +70,59 @@ def index():
             return json.dumps({'error':'missing the "books" parameter'})
         if 'lang' not in payload:
             return json.dumps({'error':'missing the "lang" parameter'})
+        if 'resource' not in payload:
+            return json.dump({'error':'missing the "resource" parameter'})
 
         # read fields
+        if 'format' in payload:
+            format = payload['format']
+        else:
+            format = "epub"
         books = payload['books']
         lang = payload['lang']
+        resource = payload['resource']
         chapters = []
-        if 'chapters' in payload and isinstance(payload['books'], list) and len(payload['books']) is 1:
+        if 'chapters' in payload and isinstance(books, list) and len(books) is 1:
             chapters = payload['chapters']
             if 'start' not in chapters or 'end' not in chapters:
                 chapters = []
 
+        filename = "translation." + format
+        output_path = temp_root + "/" + filename
+        command = "/usr/local/bin/pandoc -f html -t " + format + " -o " + output_path
+        input_path = source_root + "/" + lang + "/" + resource + "/"
+
         # TODO: select the proper source
-        path = source_root + "/test/*"
-        filename = "translation.epub"
-        output = temp_root + "/" + filename
+        if not isinstance(books, list):
+            # TODO: add all the books to the command
+            pass
+        else:
+            for b in books:
+                print("loading book: " + b)
+                if len(chapters) == 2:
+                    for i in range(chapters["start"], chapters["end"]):
+                        print("loading chapter: " + str(i))
+                        # add selected chapters
+                        command += " " + input_path + b + "/" + str(i) + ".html"
+                else:
+                    # add all the chapters
+                    command += " " + input_path + b + "/*"
+
         # docx
         # pandoc -f html -t docx -o translation.docx /Users/joel/git/Door43/book_renderer/source/test/*
         # latex
         # pandoc -f html -t latex -o translation.txt /Users/joel/git/Door43/book_renderer/source/test/*
-        command = "/usr/local/bin/pandoc -f html -t epub -o " + output + " " + path
+        #command = "/usr/local/bin/pandoc -f html -t epub -o " + output + " " + path
+
+        # debug the command
+        print(command)
         os.system(command)
-        if(os.path.isfile(output)):
+        if(os.path.isfile(output_path)):
             try:
-                with open(output, 'r') as content_file:
-                    return Response(content_file.read(),  mimetype='application/octet-stream')
+                with open(output_path, 'r') as content_file:
+                    response = Response(content_file.read(),  content_type='application/octet-stream')
+                    response.content_disposition = 'attachment; filename="export.epub"'
+                    return response
             except Exception as e:
                 return json.dumps({'error': e.message})
         else:
