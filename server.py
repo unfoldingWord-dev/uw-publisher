@@ -9,50 +9,53 @@ import urllib2
 import urllib
 import base64
 import shlex
-from flask import Flask, request, abort
+from flask import Flask, request, Response, abort
 from subprocess import *
 
 app = Flask(__name__)
-# source_root = ""
-# port = ""
-#
-# # reads in the config file
-# def loadConfig(config_path):
-#     global source_root, port
-#
-#     if not os.path.isfile(config_path):
-#         print("the configuration file is missing")
-#         exit()
-#
-#     # load settings from the config file
-#     json_data = open(config_path)
-#     try:
-#         data = json.load(json_data)
-#     except ValueError:
-#         print("the configuration file could not be parsed")
-#         exit()
-#     json_data.close()
-#
-#     # validate configuration
-#     if 'port' not in data or 'source_root' not in data:
-#         print("missing some configuration details")
-#         exit()
-#
-#     source_root = str(data['source_root'])
-#     port = str(data['port'])
-#
-#     # validate configuration values
-#     if source_root == "" or port == "":
-#         print("invalid configuration values")
-#         exit()
-#
-#     # make sure directories exist
-#     if not os.path.isdir(source_root):
-#         print('--------------------------------------------------------------')
-#         print('Configuration warning:')
-#         print('could not locate the source path please make sure it exists')
-#         print('path: '+source_root)
-#         print('--------------------------------------------------------------\n')
+source_root = ""
+temp_root = ""
+port = 88
+
+# reads in the config file
+def loadConfig(config_path):
+    global source_root, temp_root, port
+
+    if not os.path.isfile(config_path):
+        print("the configuration file is missing")
+        exit()
+
+    # load settings from the config file
+    json_data = open(config_path)
+    data = {}
+    try:
+        data = json.load(json_data)
+    except ValueError:
+        print("the configuration file could not be parsed")
+        exit()
+    json_data.close()
+
+    # validate configuration
+    if 'port' not in data or 'source_root' not in data:
+        print("missing some configuration details")
+        exit()
+
+    source_root = str(data['source_root'])
+    temp_root = str(data['temp_root'])
+    port = int(data['port'])
+
+    # validate configuration values
+    if source_root == "" or port == "" or temp_root == "":
+        print("invalid configuration values")
+        exit()
+
+    # make sure directories exist
+    if not os.path.isdir(source_root):
+        print('--------------------------------------------------------------')
+        print('Configuration warning:')
+        print('could not locate the source path please make sure it exists')
+        print('path: '+source_root)
+        print('--------------------------------------------------------------\n')
 
 # class ResponseHandler(protocol.Protocol):
 #     global source_root, api_version
@@ -112,56 +115,61 @@ app = Flask(__name__)
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
-
+    global source_root, temp_root
     if request.method == 'GET':
         return json.dumps({'ok':''})
 
     elif request.method == 'POST':
         # load payload
         try:
-            payload = request.json['data']
+            payload = json.loads(request.values['data']) #request.json['data']
         except Exception as e:
             return json.dumps({'error': e.message,
                                'request': request.json})
 
+        if 'books' not in payload:
+            return json.dumps({'error':'missing the "books" parameter'})
+        if 'lang' not in payload:
+            return json.dumps({'error':'missing the "lang" parameter'})
+
         # read fields
-        if 'slug' not in payload:
-            return json.dumps({'error':'missing the "slug"'})
-        slug = payload['slug']
+        books = payload['books']
+        lang = payload['lang']
+        chapters = []
+        if 'chapters' in payload and isinstance(payload['books'], list) and len(payload['books']) is 1:
+            chapters = payload['chapters']
+            if 'start' not in chapters or 'end' not in chapters:
+                chapters = []
 
-        if 'sig' not in payload:
-            return json.dumps({'error':'missing the "sig"'})
-        sig = payload['sig']
+        # TODO: place this in a config file
+        path = source_root + "/test/*"
+        filename = "translation.epub"
+        output = temp_root + "/" + filename
+        # docx
+        # pandoc -f html -t docx -o translation.docx /Users/joel/git/Door43/book_renderer/source/test/*
+        # latex
+        # pandoc -f html -t latex -o translation.txt /Users/joel/git/Door43/book_renderer/source/test/*
+        command = "/usr/local/bin/pandoc -f html -t epub -o " + output + " " + path
+        os.system(command)
+        if(os.path.isfile(output)):
+            try:
 
-        if 'content' not in payload:
-            return json.dumps({'error':'missing the "content"'})
-        content = payload['content']
-
-
-        return json.dumps({'ok':'We are done'})
+                with open(output, 'r') as content_file:
+                    return Response(content_file.read(),  mimetype='application/octet-stream')
+            except Exception as e:
+                return json.dumps({'error': e.message})
+        else:
+            return json.dumps({'ok':'We are done'})
 
 if __name__ == "__main__":
-    try:
-        port_number = int(sys.argv[1])
-    except:
-        port_number = 80
-    # global port
-    # loadConfig('{0}/config.json'.format(sys.argv[0].rsplit('/', 1)[0]))
-    is_dev = os.environ.get('ENV', None) == 'dev'
-    # if os.environ.get('USE_PROXYFIX', None) == 'true':
-    #     from werkzeug.contrib.fixers import ProxyFix
-    #     app.wsgi_app = ProxyFix(app.wsgi_app)
+    global port
+    loadConfig('{0}/config.json'.format(sys.argv[0].rsplit('/', 1)[0]))
 
-    # show OpenSSL version
-    command_str = 'openssl version'
-    command = shlex.split(command_str)
-    com = Popen(command, shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = com.communicate()
-    print out
+    is_dev = os.environ.get('ENV', None) == 'dev'
 
     print('--------------------------')
     print('Publishing Server')
-    print('Listening on port: '+ str(port_number))
+    print('Listening on port: '+ str(port))
     print('--------------------------\n')
 
-    app.run(host='0.0.0.0', port=port_number, debug=is_dev)
+    app.run(host='0.0.0.0', port=port, debug=is_dev)
