@@ -3,12 +3,6 @@
 import os
 import sys
 import json
-import requests
-import time
-import urllib2
-import urllib
-import base64
-import shlex
 from flask import Flask, request, Response, abort
 from subprocess import *
 
@@ -57,62 +51,6 @@ def loadConfig(config_path):
         print('path: '+source_root)
         print('--------------------------------------------------------------\n')
 
-# class ResponseHandler(protocol.Protocol):
-#     global source_root, api_version
-#
-#     # sends an error message to the client
-#     def sendError(self, message):
-#         response = '{"version":"'+api_version+'","error":"'+message+'"}'
-#         self.transport.write(response)
-#
-#     # sends a ok message to the client
-#     def sendOk(self, message):
-#         response = '{"version":"'+api_version+'","ok":"'+message+'"}'
-#         self.transport.write(response)
-
-    # saves the data sent by the client
-    # def processData(self, data):
-    #     # TODO: only select files chosen by user
-    #     path = source_root + "/test/*"
-    #     # docx
-    #     # pandoc -f html -t docx -o translation.docx /Users/joel/git/Door43/book_renderer/source/test/*
-    #     # latex
-    #     # pandoc -f html -t latex -o translation.txt /Users/joel/git/Door43/book_renderer/source/test/*
-    #     command = "/usr/local/bin/pandoc -f html -t epub -o /Users/joel/git/Door43/book_renderer/translation.epub " + path
-    #     os.system(command)
-    #     # TODO: return file to user
-    #     self.sendOk("done")
-
-    # handle responses
-    # def dataReceived(self, json_data):
-    #     # expects {'key':'public key', 'udid':'device id', 'username':'an optional username'}
-    #     try:
-    #         data = json.loads(json_data)
-    #     except ValueError:
-    #         print("Unexpected error:", sys.exc_info()[0])
-    #         self.sendError('invalid request')
-    #         return
-    #
-    #     # if 'key' not in data or data['key'] == "" or 'udid' not in data or data['udid'] == "":
-    #     #     self.sendError('incomplete request')
-    #     # else:
-    #     self.processData(data)
-
-# class ResponseFactory(protocol.Factory):
-#     def buildProtocol(self, addr):
-#         return ResponseHandler()
-
-# loadConfig('{0}/config.json'.format(sys.argv[0].rsplit('/', 1)[0]))
-
-# print('--------------------------')
-# print('Translation Studio Server')
-# print('Version: '+api_version)
-# print('Listening on port: '+port)
-# print('--------------------------\n')
-
-# endpoints.serverFromString(reactor, 'tcp:'+port).listen(ResponseFactory())
-# reactor.run()
-
 @app.route("/", methods=['GET', 'POST'])
 def index():
     global source_root, temp_root
@@ -141,7 +79,7 @@ def index():
             if 'start' not in chapters or 'end' not in chapters:
                 chapters = []
 
-        # TODO: place this in a config file
+        # TODO: select the proper source
         path = source_root + "/test/*"
         filename = "translation.epub"
         output = temp_root + "/" + filename
@@ -153,7 +91,6 @@ def index():
         os.system(command)
         if(os.path.isfile(output)):
             try:
-
                 with open(output, 'r') as content_file:
                     return Response(content_file.read(),  mimetype='application/octet-stream')
             except Exception as e:
