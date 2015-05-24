@@ -122,6 +122,7 @@ def index():
                 with open(output_path, 'r') as content_file:
                     response = Response(content_file.read(),  content_type='application/octet-stream')
                     response.content_disposition = 'attachment; filename="export.epub"'
+                    response.headers['Content-Disposition'] = 'attachment; filename="export.epub"'
                     return response
             except Exception as e:
                 return json.dumps({'error': e.message})
