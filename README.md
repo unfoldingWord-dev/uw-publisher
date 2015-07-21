@@ -1,4 +1,4 @@
 # uw-publisher
 
-This flask server receives communication from the [browserbible-3](https://github.com/neutrinog/browserbible-3) client
-and exports the chosen Bible text into any source the user desires.
+This flask server receives communication from the [uw-web](https://github.com/unfoldingWord-dev/uw-web) client
+and exports the chosen Bible text into any format the user desires.
