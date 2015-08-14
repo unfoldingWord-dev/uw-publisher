@@ -9,12 +9,12 @@ To use this tool, you will first need to make sure you have [Python 3](https://d
 
 1) Install [Flask](http://flask.pocoo.org) using PIP3.
 
-    `sudo pip3 install flask`
+    sudo pip3 install flask
 
 2) Create 2 directories to store temporary files and source files.
 3) Copy a version of the 'sample.config.json' file to 'config.json'.
 
-    `cp sample.config.json config.json`
+    cp sample.config.json config.json
 
 4) Open the config file, and set all the appropriate settings.
 
@@ -24,4 +24,4 @@ To use this tool, you will first need to make sure you have [Python 3](https://d
 
 5) Run the flask server.
 
-    `python3 ./server.py`
+    python3 ./server.py
